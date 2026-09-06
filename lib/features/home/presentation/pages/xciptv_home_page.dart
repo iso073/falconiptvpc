@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/device/app_layout.dart';
+import '../../../../core/remote/phone_remote_service.dart';
 import '../../../../core/update/app_update_flow.dart';
 import '../../../../core/update/app_update_service.dart';
 import '../../../../core/update/app_update_status_badge.dart';
@@ -72,6 +73,12 @@ class _XCIPTVHomePageState extends State<XCIPTVHomePage> {
       onOpen: HomeModules.openEpg,
     ),
     _HomeModule(
+      title: 'KUMANDA',
+      icon: Icons.settings_remote_rounded,
+      glow: AppColors.neonPurple,
+      onOpen: HomeModules.openPhoneRemote,
+    ),
+    _HomeModule(
       title: 'AYARLAR',
       icon: Icons.settings_outlined,
       glow: AppColors.neonCyan,
@@ -94,6 +101,7 @@ class _XCIPTVHomePageState extends State<XCIPTVHomePage> {
       }
       final ProfileModel? profile = PlaybackLauncher.profileOf(context);
       context.read<ConnectionCubit>().refresh(profile);
+      unawaited(PhoneRemoteService.ensureStarted());
       unawaited(AppUpdateFlow.check(context, context.read<AppUpdateService>()));
     });
   }
@@ -231,7 +239,7 @@ class _XCIPTVHomePageState extends State<XCIPTVHomePage> {
                         itemCount: _modules.length,
                         clipBehavior: Clip.none,
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: AppLayout.homeColumns(),
+                          crossAxisCount: AppLayout.homeColumns(context),
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
                           childAspectRatio: AppLayout.homeAspect(context),

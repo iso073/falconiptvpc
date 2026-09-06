@@ -1,8 +1,8 @@
 name: falconiptv
-description: "Google TV ve Android TV için Falcon IPTV istemcisi."
+description: "Windows masaüstü için Falcon IPTV istemcisi. Aynı Xtream/M3U motoru ve tema."
 publish_to: 'none'
 
-version: 1.0.7+8
+version: 1.0.0+1
 
 environment:
   sdk: ^3.13.2
@@ -18,6 +18,8 @@ dependencies:
   flutter_bloc: ^9.1.1
   video_player: ^2.14.0
   qr_flutter: ^4.1.0
+  fvp: ^0.35.2
+  wakelock_plus: ^1.4.0
 
 dev_dependencies:
   flutter_test:

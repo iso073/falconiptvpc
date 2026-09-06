@@ -142,7 +142,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         SizedBox(
           width: AppLayout.seasonRail(context),
           child: ListView.separated(
-            clipBehavior: AppLayout.phone(context) ? Clip.hardEdge : Clip.none,
+            clipBehavior: AppLayout.catalogClip(context),
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
             itemCount: details.seasons.length,
             separatorBuilder: (context, index) => const SizedBox(height: 12),
@@ -167,7 +167,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         const SizedBox(width: 18),
         Expanded(
           child: GridView.builder(
-            clipBehavior: AppLayout.phone(context) ? Clip.hardEdge : Clip.none,
+            clipBehavior: AppLayout.catalogClip(context),
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
             itemCount: season.episodes.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

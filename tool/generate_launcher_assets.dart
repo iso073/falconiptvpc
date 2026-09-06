@@ -1,4 +1,4 @@
-// Regenerates the Android launcher icons, TV banner and native splash mark
+// Regenerates launcher icons, TV banner, splash mark and the Windows .ico
 // from assets/branding/falcon_logo.png.
 //
 // Run with: dart run tool/generate_launcher_assets.dart
@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:image/image.dart';
 
 const String _source = 'assets/branding/falcon_logo.png';
+const String _windowsIco = 'windows/runner/resources/app_icon.ico';
 final ColorRgb8 _background = ColorRgb8(0x0A, 0x0B, 0x10);
 
 const Map<String, int> _launcherSizes = <String, int>{
@@ -33,10 +34,13 @@ void main() {
     return;
   }
 
-  _writeLauncherIcons(logo);
-  _writeTvBanner(logo);
-  _writeSplash(logo);
-  stdout.writeln('Launcher ikonları, TV banner ve splash logosu üretildi.');
+  if (Directory('android').existsSync()) {
+    _writeLauncherIcons(logo);
+    _writeTvBanner(logo);
+    _writeSplash(logo);
+  }
+  _writeWindowsIco(logo);
+  stdout.writeln('Launcher ikonları, TV banner, splash ve Windows .ico üretildi.');
 }
 
 void _writeLauncherIcons(Image logo) {
@@ -46,6 +50,28 @@ void _writeLauncherIcons(Image logo) {
       _fitOnBackground(logo, width: size, height: size, inset: 0.12),
     );
   });
+}
+
+void _writeWindowsIco(Image logo) {
+  final Image mark = _iconMark(logo);
+  final List<Image> frames = <Image>[
+    for (final int size in <int>[16, 24, 32, 48, 64, 128, 256])
+      _fitOnBackground(
+        size <= 48 ? mark : logo,
+        width: size,
+        height: size,
+        inset: size <= 32 ? 0.08 : 0.1,
+      ),
+  ];
+  final File file = File(_windowsIco);
+  file.parent.createSync(recursive: true);
+  file.writeAsBytesSync(IcoEncoder().encodeImages(frames));
+  stdout.writeln('  ${file.path}');
+}
+
+Image _iconMark(Image logo) {
+  final int height = (logo.height * 0.62).round().clamp(1, logo.height);
+  return copyCrop(logo, x: 0, y: 0, width: logo.width, height: height);
 }
 
 void _writeTvBanner(Image logo) {

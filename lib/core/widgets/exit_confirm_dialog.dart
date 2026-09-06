@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -15,7 +18,7 @@ Future<bool> showNeonConfirmDialog({
 }) async {
   // The dialog can be opened by a held D-Pad key, so ignore activations that
   // arrive from the same physical press that triggered it.
-  final DateTime acceptingFrom = FormFactor.isPhone
+  final DateTime acceptingFrom = FormFactor.usesPointer
       ? DateTime.now()
       : DateTime.now().add(const Duration(milliseconds: 700));
   bool isAccepting() => DateTime.now().isAfter(acceptingFrom);
@@ -105,9 +108,13 @@ Future<bool> showExitConfirmDialog(BuildContext context) {
 
 Future<void> handleAppExit(BuildContext context) async {
   final bool shouldExit = await showExitConfirmDialog(context);
-  if (shouldExit) {
-    await SystemNavigator.pop();
+  if (!shouldExit) {
+    return;
   }
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    exit(0);
+  }
+  await SystemNavigator.pop();
 }
 
 Future<void> popToPreviousPage(BuildContext context) async {

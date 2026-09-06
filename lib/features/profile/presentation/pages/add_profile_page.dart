@@ -247,7 +247,7 @@ class _AddProfilePageState extends State<AddProfilePage> {
                         ),
                       ),
                       const Spacer(),
-                      if (!_isEditing && FormFactor.isTelevisionOf(context))
+                      if (!_isEditing && !FormFactor.isPhoneOf(context))
                         NeonFocusCard(
                           glowColor: AppColors.neonCyan,
                           focusedScale: 1.06,

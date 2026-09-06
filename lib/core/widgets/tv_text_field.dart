@@ -123,7 +123,7 @@ class _TvTextFieldState extends State<TvTextField> {
 
   @override
   Widget build(BuildContext context) {
-    final bool phone = FormFactor.isPhoneOf(context);
+    final bool phone = FormFactor.usesPointerOf(context);
     final bool editing = phone || _editing;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),

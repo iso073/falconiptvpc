@@ -972,7 +972,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
                             ],
                           ),
                           const SizedBox(height: 10),
-                          if (FormFactor.isPhoneOf(context) &&
+                          if (FormFactor.usesPointerOf(context) &&
                               _isOnDemand &&
                               duration > Duration.zero)
                             SliderTheme(
@@ -1004,7 +1004,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
                               ),
                             ),
                           const SizedBox(height: 10),
-                          if (FormFactor.isPhoneOf(context))
+                          if (FormFactor.usesPointerOf(context))
                             _PhoneTransportBar(
                               isOnDemand: _isOnDemand,
                               isPaused: isPaused,
@@ -1183,7 +1183,7 @@ class _ChannelListPanelState extends State<_ChannelListPanel> {
 
   // The panel is opened by an OK press that may still be held, so ignore
   // selections arriving from that same press.
-  final DateTime _acceptingFrom = FormFactor.isPhone
+  final DateTime _acceptingFrom = FormFactor.usesPointer
       ? DateTime.now()
       : DateTime.now().add(const Duration(milliseconds: 600));
 
@@ -1365,7 +1365,7 @@ class _TracksPanelState extends State<_TracksPanel> {
   @override
   void initState() {
     super.initState();
-    _acceptingFrom = FormFactor.isPhone
+    _acceptingFrom = FormFactor.usesPointer
         ? DateTime.now()
         : DateTime.now().add(_acceptDelay);
     _cursor = _initialCursor();
@@ -1551,8 +1551,8 @@ class _TracksPanelState extends State<_TracksPanel> {
               ),
               const SizedBox(height: 16),
               Text(
-                FormFactor.isPhoneOf(context)
-                    ? 'Dokunarak seçiniz. Geri ile kapatınız. Gömülü ses bazı yayınlarda değişmeyebilir.'
+                FormFactor.usesPointerOf(context)
+                    ? 'Fare ile seçiniz. Esc veya geri ile kapatınız. Gömülü ses bazı yayınlarda değişmeyebilir.'
                     : 'Yukarı/Aşağı ile seçiniz, OK ile onaylayınız, Geri ile kapatınız. Gömülü ses bazı yayınlarda değişmeyebilir.',
                 style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.3),
               ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'core/constants/hive_bootstrap.dart';
 import 'core/constants/hive_boxes.dart';
 import 'core/device/form_factor.dart';
 import 'core/network/iptv_dio_client.dart';
+import 'core/remote/falcon_navigator.dart';
 import 'core/theme/app_theme.dart';
 import 'core/update/app_update_service.dart';
 import 'core/update/update_status_cubit.dart';
@@ -129,8 +131,10 @@ class _FalconIptvAppState extends State<FalconIptvApp> {
         ],
         child: MaterialApp(
           title: 'Falcon IPTV',
+          navigatorKey: FalconNavigator.key,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.dark,
+          scrollBehavior: const _DesktopScrollBehavior(),
           // The TV layout is already sized for 10-foot viewing, so system font
           // scaling must not resize it.
           builder: (context, child) {
@@ -145,4 +149,16 @@ class _FalconIptvAppState extends State<FalconIptvApp> {
       ),
     );
   }
+}
+
+class _DesktopScrollBehavior extends MaterialScrollBehavior {
+  const _DesktopScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => const <PointerDeviceKind>{
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
 }

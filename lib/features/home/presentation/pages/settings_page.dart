@@ -16,6 +16,7 @@ import '../../../../core/widgets/tv_back_scope.dart';
 import '../../../profile/data/models/profile_model.dart';
 import '../../../profile/presentation/cubit/profile_cubit.dart';
 import '../../../profile/presentation/pages/profile_selection_page.dart';
+import '../../../remote/presentation/pages/phone_remote_page.dart';
 import '../../../settings/data/parental_control_repository.dart';
 import '../../../settings/presentation/cubit/sport_mode_cubit.dart';
 import '../../../settings/presentation/widgets/pin_entry_dialog.dart';
@@ -338,6 +339,37 @@ class _SettingsPageState extends State<SettingsPage> {
                               ),
                             ),
                             _SettingsListCard(
+                              glowColor: AppColors.neonPurple,
+                              onActivate: () {
+                                Navigator.of(context).push(
+                                  PageRouteBuilder<void>(
+                                    transitionDuration: const Duration(milliseconds: 300),
+                                    pageBuilder: (context, animation, secondaryAnimation) =>
+                                        const PhoneRemotePage(),
+                                    transitionsBuilder:
+                                        (context, animation, secondaryAnimation, child) {
+                                      return FadeTransition(opacity: animation, child: child);
+                                    },
+                                  ),
+                                );
+                              },
+                              child: const ListTile(
+                                leading: Icon(
+                                  Icons.settings_remote_rounded,
+                                  color: AppColors.neonPurple,
+                                ),
+                                title: Text(
+                                  'Telefon Kumandası',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                subtitle: Text(
+                                  'Telefondan QR okutarak PC’yi yön tuşları ile yönetiniz.',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                            _SettingsListCard(
                               glowColor: AppColors.neonCyan,
                               onActivate: () {
                                 AppUpdateFlow.check(
@@ -352,11 +384,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                   color: AppColors.neonCyan,
                                 ),
                                 title: const Text(
-                                  'Güncellemeleri Denetle',
+                                  'PC Güncellemelerini Denetle',
                                   style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                                 subtitle: Text(
-                                  'GitHub üzerinden yeni sürüm aranır. Yüklü sürüm ${AppVersionInfo.current.name}',
+                                  'GitHub’dan Windows paketi aranır. Yüklü PC ${AppVersionInfo.current.name}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -405,7 +437,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   SizedBox(height: AppLayout.phone(context) ? 4 : 8),
                   Text(
-                    'Sürüm ${AppVersionInfo.current.name}',
+                    'Falcon IPTV PC  ${AppVersionInfo.current.name}',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.textSecondary,

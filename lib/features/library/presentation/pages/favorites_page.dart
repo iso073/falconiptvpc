@@ -81,7 +81,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                             ),
                           )
                         : GridView.builder(
-                            clipBehavior: AppLayout.phone(context) ? Clip.hardEdge : Clip.none,
+                            clipBehavior: AppLayout.catalogClip(context),
                             itemCount: items.length,
                             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: AppLayout.searchColumns(context),

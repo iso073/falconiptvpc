@@ -3,12 +3,22 @@ import 'dart:io';
 /// GitHub Releases kaynağı. Depo herkese açık olmalıdır.
 abstract final class AppUpdateConfig {
   static const String githubOwner = 'iso073';
-  static const String githubRepo = 'falconiptv';
+  static const String githubRepo = 'falconiptvpc';
   static const String apkAssetName = 'falconiptv.apk';
+  static const String windowsAssetName = 'falcontvpc.exe';
+  static const List<String> windowsAssetNames = <String>[
+    'falcontvpc.exe',
+    'falconiptv.exe',
+    'falconiptv-windows.exe',
+    'falconiptv-windows.zip',
+    'falcontvpc.zip',
+  ];
+  static const List<String> windowsExtensions = <String>['.exe', '.msi', '.zip', '.7z'];
+  static const List<String> androidExtensions = <String>['.apk'];
 
-  /// pubspec.yaml `version` ile aynı tutulmalıdır.
-  static const String currentName = '1.0.7';
-  static const int currentCode = 8;
+  /// pubspec.yaml `version` ile aynı tutulmalıdır. TV APK sürümü değildir.
+  static const String currentName = '1.0.0';
+  static const int currentCode = 1;
 
   static const Duration checkInterval = Duration.zero;
 
@@ -22,8 +32,12 @@ abstract final class AppUpdateConfig {
       'https://github.com/$githubOwner/$githubRepo/releases/latest';
 
   static String apkUrlForTag(String tag) {
+    return packageUrlForTag(tag, apkAssetName);
+  }
+
+  static String packageUrlForTag(String tag, String assetName) {
     final String safeTag = tag.startsWith('v') || tag.startsWith('V') ? tag : 'v$tag';
-    return 'https://github.com/$githubOwner/$githubRepo/releases/download/${Uri.encodeComponent(safeTag)}/$apkAssetName';
+    return 'https://github.com/$githubOwner/$githubRepo/releases/download/${Uri.encodeComponent(safeTag)}/$assetName';
   }
 
   static String? tagFromReleaseUrl(String location) {
@@ -58,7 +72,8 @@ class AppVersionInfo {
 
   static AppVersionInfo parse(String raw) {
     final String tag = raw.trim();
-    final String trimmed = tag.replaceFirst(RegExp(r'^v', caseSensitive: false), '');
+    String trimmed = tag.replaceFirst(RegExp(r'^(windows|win|pc)[-_]?', caseSensitive: false), '');
+    trimmed = trimmed.replaceFirst(RegExp(r'^v', caseSensitive: false), '');
     final List<String> parts = trimmed.split('+');
     final String name = parts.first.trim().isEmpty ? '0.0.0' : parts.first.trim();
     final int? explicitCode = parts.length > 1 ? int.tryParse(parts[1].trim()) : null;
@@ -120,14 +135,29 @@ class GithubReleaseInfo {
 
   String get cacheFileName {
     final String safeTag = tag.replaceAll(RegExp(r'[^A-Za-z0-9._+-]'), '_');
-    return 'falconiptv-$safeTag.apk';
+    final String ext = _extensionFromUrl(apkUrl);
+    return 'falconiptv-$safeTag$ext';
+  }
+
+  static String _extensionFromUrl(String url) {
+    final String path = Uri.tryParse(url)?.path ?? url;
+    final int dot = path.lastIndexOf('.');
+    if (dot == -1) {
+      return '.bin';
+    }
+    return path.substring(dot).toLowerCase();
   }
 
   bool isReusableCache(File file) {
     return AppUpdateCache.isReusable(file, expectedSize: apkSize);
   }
 
-  static GithubReleaseInfo? fromJson(Map<String, dynamic> json, {String preferredAsset = ''}) {
+  static GithubReleaseInfo? fromJson(
+    Map<String, dynamic> json, {
+    String preferredAsset = '',
+    List<String> allowedExtensions = AppUpdateConfig.androidExtensions,
+    List<String> preferredNames = const <String>[],
+  }) {
     final String tag = '${json['tag_name'] ?? json['name'] ?? ''}'.trim();
     if (tag.isEmpty) {
       return null;
@@ -138,17 +168,21 @@ class GithubReleaseInfo {
     }
     String? url;
     int size = 0;
+    final List<String> preferred = <String>[
+      if (preferredAsset.isNotEmpty) preferredAsset.toLowerCase(),
+      ...preferredNames.map((String name) => name.toLowerCase()),
+    ];
     for (final Object? asset in assetsRaw) {
       if (asset is! Map) {
         continue;
       }
       final String name = '${asset['name'] ?? ''}'.toLowerCase();
       final String browser = '${asset['browser_download_url'] ?? ''}';
-      if (!name.endsWith('.apk') || browser.isEmpty) {
+      if (browser.isEmpty || !_hasAllowedExtension(name, allowedExtensions)) {
         continue;
       }
       final int assetSize = int.tryParse('${asset['size'] ?? ''}') ?? 0;
-      if (preferredAsset.isNotEmpty && name == preferredAsset.toLowerCase()) {
+      if (preferred.contains(name)) {
         url = browser;
         size = assetSize;
         break;
@@ -168,6 +202,15 @@ class GithubReleaseInfo {
       notes: '${json['body'] ?? ''}'.trim(),
       apkSize: size,
     );
+  }
+
+  static bool _hasAllowedExtension(String name, List<String> extensions) {
+    for (final String ext in extensions) {
+      if (name.endsWith(ext)) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 

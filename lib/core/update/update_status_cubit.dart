@@ -16,9 +16,9 @@ class UpdateStatusState {
 
   String get title => switch (phase) {
         UpdateStatusPhase.checking => 'Denetleniyor',
-        UpdateStatusPhase.current => 'Güncel ${AppVersionInfo.current.name}',
+        UpdateStatusPhase.current => 'PC ${AppVersionInfo.current.name}',
         UpdateStatusPhase.available =>
-          release == null ? 'Güncelleme var' : '${release!.version.name} var',
+          release == null ? 'PC güncelleme var' : 'PC ${release!.version.name}',
         UpdateStatusPhase.failed => 'Denetlenemedi',
       };
 }
@@ -33,7 +33,7 @@ class UpdateStatusCubit extends Cubit<UpdateStatusState> {
     try {
       final GithubReleaseInfo? latest = await _service.fetchLatest();
       if (latest == null) {
-        emit(const UpdateStatusState(phase: UpdateStatusPhase.failed));
+        emit(const UpdateStatusState(phase: UpdateStatusPhase.current));
         return;
       }
       final bool newer = latest.version.isNewerThan(AppVersionInfo.current);

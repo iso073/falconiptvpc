@@ -1,14 +1,19 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Phone vs 10-foot TV. Screen size is never used.
+/// Phone vs 10-foot TV vs desktop. Screen size is never used.
 ///
 /// Play Store TVs (Sony, TCL, Hisense, Shield, Chromecast, Streamer, …) report
 /// Leanback and/or `UI_MODE_TYPE_TELEVISION`. Phones and tablets do not.
 /// A high-density 1080p TV can have a logical shortest side under 550 dp; a
 /// landscape tablet can be huge. Both would be misclassified by size.
-enum DeviceKind { phone, television }
+///
+/// Windows / Linux / macOS are [DeviceKind.desktop]: TV spacing and glow, with
+/// mouse and hardware keyboard instead of a D-Pad.
+enum DeviceKind { phone, television, desktop }
 
 class DeviceSignals {
   const DeviceSignals({
@@ -65,14 +70,34 @@ abstract final class FormFactor {
   static const MethodChannel _channel = MethodChannel('falconiptv/device');
 
   static bool _isTelevision = false;
+  static bool _isDesktop = false;
   static bool _ready = false;
 
   static bool get isTelevision => _isTelevision;
-  static bool get isPhone => !_isTelevision;
+  static bool get isDesktop => _isDesktop;
+  static bool get isPhone => !_isTelevision && !_isDesktop;
   static bool get isReady => _ready;
+  static bool get usesPointer => isDesktop || isPhone;
+
+  static bool get _isDesktopPlatform {
+    if (kIsWeb) {
+      return false;
+    }
+    return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+  }
 
   static Future<void> ensureInitialized() async {
     if (_ready) {
+      return;
+    }
+    if (_isDesktopPlatform) {
+      _isDesktop = true;
+      _isTelevision = false;
+      _ready = true;
+      assert(() {
+        debugPrint('FormFactor: desktop');
+        return true;
+      }());
       return;
     }
     for (int attempt = 0; attempt < 3; attempt++) {
@@ -83,6 +108,7 @@ abstract final class FormFactor {
         final DeviceKind? kind = _kindFromChannel(raw);
         if (kind != null) {
           _isTelevision = kind == DeviceKind.television;
+          _isDesktop = kind == DeviceKind.desktop;
           _ready = true;
           assert(() {
             debugPrint('FormFactor: $kind from $raw');
@@ -117,7 +143,22 @@ abstract final class FormFactor {
     return null;
   }
 
-  static bool isPhoneOf(BuildContext context) => !isTelevisionOf(context);
+  static bool isPhoneOf(BuildContext context) => !isTelevisionOf(context) && !isDesktopOf(context);
+
+  static bool isDesktopOf(BuildContext context) {
+    if (_ready) {
+      return _isDesktop;
+    }
+    return _isDesktopPlatform;
+  }
+
+  static bool usesPointerOf(BuildContext context) {
+    if (_ready) {
+      return usesPointer;
+    }
+    return isDesktopOf(context) ||
+        MediaQuery.maybeOf(context)?.navigationMode != NavigationMode.directional;
+  }
 
   static bool isTelevisionOf(BuildContext context) {
     if (_ready) {

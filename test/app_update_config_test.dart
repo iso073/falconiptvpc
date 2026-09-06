@@ -9,6 +9,8 @@ void main() {
     expect(AppVersionInfo.parse('v1.2.0+15').name, '1.2.0');
     expect(AppVersionInfo.parse('v1.2.0+15').code, 15);
     expect(AppVersionInfo.parse('1.0.3').code, 10003);
+    expect(AppVersionInfo.parse('pc-v1.0.1').name, '1.0.1');
+    expect(AppVersionInfo.parse('windows-1.2.0').name, '1.2.0');
   });
 
   test('yeni sürüm eski sürümden büyük sayılır', () {
@@ -24,13 +26,13 @@ void main() {
   test('GitHub HTML ve etiket adresinden sürüm okunur', () {
     expect(
       AppUpdateConfig.tagFromHtml(
-        '<a href="/iso073/falconiptv/releases/tag/v1.0.5%2B6">1.0.5</a>',
+        '<a href="/iso073/falconiptvpc/releases/tag/v1.0.5%2B6">1.0.5</a>',
       ),
       'v1.0.5+6',
     );
     expect(
       AppUpdateConfig.apkUrlForTag('v1.0.5+6'),
-      'https://github.com/iso073/falconiptv/releases/download/v1.0.5%2B6/falconiptv.apk',
+      'https://github.com/iso073/falconiptvpc/releases/download/v1.0.5%2B6/falconiptv.apk',
     );
   });
 
@@ -79,7 +81,7 @@ void main() {
   test('GitHub yönlendirme adresinden sürüm etiketi okunur', () {
     expect(
       AppUpdateConfig.tagFromReleaseUrl(
-        'https://github.com/iso073/falconiptv/releases/tag/v1.0.1+2',
+        'https://github.com/iso073/falconiptvpc/releases/tag/v1.0.1+2',
       ),
       'v1.0.1+2',
     );
@@ -87,7 +89,56 @@ void main() {
 
   test('açılış rozeti güncel ve güncelleme metinlerini gösterir', () {
     expect(const UpdateStatusState().title, 'Denetleniyor');
-    expect(const UpdateStatusState(phase: UpdateStatusPhase.current).title, 'Güncel ${AppVersionInfo.current.name}');
-    expect(const UpdateStatusState(phase: UpdateStatusPhase.available).title, 'Güncelleme var');
+    expect(
+      const UpdateStatusState(phase: UpdateStatusPhase.current).title,
+      'PC ${AppVersionInfo.current.name}',
+    );
+    expect(const UpdateStatusState(phase: UpdateStatusPhase.available).title, 'PC güncelleme var');
+  });
+
+  test('yalnızca Windows paketi PC güncellemesi sayılır', () {
+    expect(
+      GithubReleaseInfo.fromJson(
+        <String, dynamic>{
+          'tag_name': 'v1.0.7+8',
+          'assets': <Map<String, Object>>[
+            <String, Object>{
+              'name': 'falconiptv.apk',
+              'browser_download_url': 'https://example.com/falconiptv.apk',
+              'size': 100,
+            },
+          ],
+        },
+        preferredAsset: AppUpdateConfig.windowsAssetName,
+        preferredNames: AppUpdateConfig.windowsAssetNames,
+        allowedExtensions: AppUpdateConfig.windowsExtensions,
+      ),
+      isNull,
+    );
+
+    final GithubReleaseInfo? release = GithubReleaseInfo.fromJson(
+      <String, dynamic>{
+        'tag_name': 'pc-v1.0.1',
+        'assets': <Map<String, Object>>[
+          <String, Object>{
+            'name': 'falconiptv.apk',
+            'browser_download_url': 'https://example.com/falconiptv.apk',
+          },
+          <String, Object>{
+            'name': 'falcontvpc.exe',
+            'browser_download_url': 'https://example.com/falcontvpc.exe',
+            'size': 88000000,
+          },
+        ],
+      },
+      preferredAsset: AppUpdateConfig.windowsAssetName,
+      preferredNames: AppUpdateConfig.windowsAssetNames,
+      allowedExtensions: AppUpdateConfig.windowsExtensions,
+    );
+    expect(release, isNotNull);
+    expect(release!.apkUrl, 'https://example.com/falcontvpc.exe');
+    expect(release.cacheFileName, 'falconiptv-pc-v1.0.1.exe');
+    expect(release.version.name, '1.0.1');
+    expect(release.version.isNewerThan(AppVersionInfo.current), isTrue);
   });
 }

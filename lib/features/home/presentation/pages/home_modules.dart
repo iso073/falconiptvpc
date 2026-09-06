@@ -4,6 +4,7 @@ import '../../../catalog/presentation/pages/epg_page.dart';
 import '../../../catalog/presentation/pages/live_tv_page.dart';
 import '../../../library/presentation/pages/favorites_page.dart';
 import '../../../library/presentation/pages/search_page.dart';
+import '../../../remote/presentation/pages/phone_remote_page.dart';
 import 'settings_page.dart';
 
 abstract final class HomeModules {
@@ -20,6 +21,8 @@ abstract final class HomeModules {
   static void openSearch(BuildContext context) => _push(context, const SearchPage());
 
   static void openFavorites(BuildContext context) => _push(context, const FavoritesPage());
+
+  static void openPhoneRemote(BuildContext context) => _push(context, const PhoneRemotePage());
 
   static void _push(BuildContext context, Widget page) {
     Navigator.of(context).push(

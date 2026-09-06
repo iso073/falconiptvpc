@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/device/app_layout.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/update/app_update_config.dart';
 import '../../../../core/widgets/falcon_logo.dart';
 import '../../../profile/presentation/pages/profile_selection_page.dart';
 
@@ -69,7 +68,7 @@ class _SplashPageState extends State<SplashPage> {
                 FalconLogo(height: AppLayout.splashLogo(context), glow: true),
                 const SizedBox(height: 18),
                 Text(
-                  'Sürüm ${AppVersionInfo.current.name}',
+                  'Falcon IPTV PC',
                   style: const TextStyle(fontSize: 22, color: AppColors.textSecondary, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 36),

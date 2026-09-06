@@ -24,13 +24,20 @@ abstract final class AppUpdateFlow {
         return;
       }
       if (latest == null) {
-        throw StateError('GitHub sürümü okunamadı.');
+        if (force) {
+          TvToastService.show(
+            context,
+            'Yüklü PC sürümü ${AppVersionInfo.current.name}. GitHub’da Windows paketi yok.',
+            type: TvToastType.info,
+          );
+        }
+        return;
       }
       if (!latest.version.isNewerThan(AppVersionInfo.current)) {
         if (force) {
           TvToastService.show(
             context,
-            'Yüklü ${AppVersionInfo.current.name}. GitHub ${latest.version.name}.',
+            'Falcon IPTV PC ${AppVersionInfo.current.name} güncel.',
             type: TvToastType.success,
           );
         }
@@ -39,29 +46,29 @@ abstract final class AppUpdateFlow {
       final GithubReleaseInfo update = latest;
       final bool install = await showNeonConfirmDialog(
         context: context,
-        title: 'Yeni Sürüm',
+        title: 'Yeni PC Sürümü',
         message:
-            'Sürüm ${update.version.name} yayımlandı. Şu an ${AppVersionInfo.current.name} yüklü. Güncellemek ister misiniz?',
+            'Sürüm ${update.version.name} GitHub’da yayımlandı. Şu an ${AppVersionInfo.current.name} yüklü. Windows paketini indirmek ister misiniz?',
         cancelLabel: 'Daha sonra',
-        confirmLabel: 'Güncelle',
+        confirmLabel: 'İndir',
         confirmColor: AppColors.neonCyan,
       );
       if (!install || !context.mounted) {
         return;
       }
-      final File? cached = await service.cachedApk(update);
+      final File? cached = await service.cachedPackage(update);
       if (cached != null) {
         if (context.mounted) {
           TvToastService.show(
             context,
-            'İndirilmiş paket kullanılıyor. Yeniden indirilmiyor.',
+            'İndirilmiş paket kullanılıyor.',
             type: TvToastType.success,
           );
         }
-        await _install(context, service, cached);
+        await service.revealPackage(cached);
         return;
       }
-      await _downloadAndInstall(context, service, update);
+      await _downloadAndReveal(context, service, update);
     } catch (_) {
       if (force && context.mounted) {
         TvToastService.show(
@@ -72,22 +79,11 @@ abstract final class AppUpdateFlow {
     }
   }
 
-  static Future<void> _downloadAndInstall(
+  static Future<void> _downloadAndReveal(
     BuildContext context,
     AppUpdateService service,
     GithubReleaseInfo update,
   ) async {
-    if (!await service.canInstallPackages()) {
-      if (context.mounted) {
-        TvToastService.show(
-          context,
-          'Bilinmeyen uygulamaların yüklenmesine izin veriniz, ardından yeniden deneyiniz.',
-        );
-      }
-      await service.openInstallPermission();
-      return;
-    }
-
     final ValueNotifier<double?> progress = ValueNotifier<double?>(null);
     showDialog<void>(
       context: context,
@@ -100,7 +96,7 @@ abstract final class AppUpdateFlow {
             side: BorderSide(color: AppColors.neonCyan.withValues(alpha: 0.45), width: 2),
           ),
           title: const Text(
-            'Güncelleme indiriliyor',
+            'Windows paketi indiriliyor',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
           ),
@@ -130,7 +126,7 @@ abstract final class AppUpdateFlow {
     );
 
     try {
-      final File file = await service.downloadApk(
+      final File file = await service.downloadPackage(
         update,
         onProgress: (int received, int total) {
           if (total > 0) {
@@ -140,8 +136,13 @@ abstract final class AppUpdateFlow {
       );
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
+        TvToastService.show(
+          context,
+          'Paket indirildi. Klasör açılıyor; yeni exe ile değiştiriniz.',
+          type: TvToastType.success,
+        );
       }
-      await _install(context, service, file);
+      await service.revealPackage(file);
     } catch (_) {
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -150,37 +151,5 @@ abstract final class AppUpdateFlow {
     } finally {
       progress.dispose();
     }
-  }
-
-  static Future<void> _install(
-    BuildContext context,
-    AppUpdateService service,
-    File file,
-  ) async {
-    if (!await service.canInstallPackages()) {
-      if (context.mounted) {
-        TvToastService.show(
-          context,
-          'Bilinmeyen uygulamaların yüklenmesine izin veriniz, ardından yeniden deneyiniz.',
-        );
-      }
-      await service.openInstallPermission();
-      return;
-    }
-    if (!await service.canInstallOverCurrent(file)) {
-      if (context.mounted) {
-        await showNeonConfirmDialog(
-          context: context,
-          title: 'Kurulum Engellendi',
-          message:
-              'Yüklü kopya farklı bir imza ile kurulmuş. Uygulamayı bir kez kaldırıp yeni falconiptv.apk dosyasını yükleyiniz. Sonraki güncellemeler sorunsuz kurulur.',
-          cancelLabel: 'Kapat',
-          confirmLabel: 'Tamam',
-          confirmColor: AppColors.neonCyan,
-        );
-      }
-      return;
-    }
-    await service.installApk(file);
   }
 }

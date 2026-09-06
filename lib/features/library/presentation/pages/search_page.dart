@@ -136,13 +136,13 @@ class _SearchPageState extends State<SearchPage> {
                     label: 'Kanal, film veya dizi adı',
                     controller: _query,
                     textInputAction: TextInputAction.search,
-                    onChanged: FormFactor.isPhoneOf(context) ? (_) => _search() : null,
+                    onChanged: FormFactor.usesPointerOf(context) ? (_) => _search() : null,
                     onSubmitted: (_) {
                       FocusScope.of(context).unfocus();
                       _search();
                     },
                   ),
-                  if (!FormFactor.isPhoneOf(context)) ...[
+                  if (!FormFactor.usesPointerOf(context)) ...[
                   const SizedBox(height: 14),
                   SizedBox(
                     height: 168,
@@ -224,7 +224,7 @@ class _SearchPageState extends State<SearchPage> {
       );
     }
     return GridView.builder(
-      clipBehavior: AppLayout.phone(context) ? Clip.hardEdge : Clip.none,
+      clipBehavior: AppLayout.catalogClip(context),
       itemCount: _results.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: AppLayout.searchColumns(context),

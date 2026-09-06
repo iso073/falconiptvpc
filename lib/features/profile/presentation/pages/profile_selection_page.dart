@@ -50,6 +50,117 @@ class ProfileSelectionPage extends StatelessWidget {
     );
   }
 
+  Widget _profileSlot(
+    BuildContext context, {
+    required ProfileLoaded loaded,
+    required int index,
+    required double cardWidth,
+    double? cardHeight,
+    bool expand = false,
+    required bool compact,
+  }) {
+    final bool phone = FormFactor.isPhoneOf(context);
+    final bool isAddCard = index == loaded.profiles.length;
+    final bool isQrCard = index == loaded.profiles.length + 1;
+    final Widget card;
+    Widget? editButton;
+
+    if (isAddCard) {
+      card = NeonFocusCard(
+        autofocus: loaded.profiles.isEmpty,
+        glowColor: AppColors.neonPurple,
+        focusedScale: 1.0,
+        padding: compact ? const EdgeInsets.all(14) : const EdgeInsets.all(18),
+        onActivate: () => _openAddProfile(context),
+        child: compact
+            ? const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: _AddProfileCardBody(compact: true),
+              )
+            : const _AddProfileCardBody(compact: false),
+      );
+    } else if (isQrCard) {
+      if (phone) {
+        return const SizedBox.shrink();
+      }
+      card = NeonFocusCard(
+        glowColor: AppColors.neonCyan,
+        focusedScale: 1.0,
+        padding: compact ? const EdgeInsets.all(14) : const EdgeInsets.all(18),
+        onActivate: () => _openQrProfile(context),
+        child: compact
+            ? const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: _QrProfileCardBody(),
+              )
+            : const _QrProfileCardBody(),
+      );
+    } else {
+      final ProfileModel profile = loaded.profiles[index];
+      final bool isXtream = profile.type == ProfileType.xtream;
+      card = NeonFocusCard(
+        autofocus: index == 0,
+        glowColor: isXtream ? AppColors.neonCyan : AppColors.neonPurple,
+        focusedScale: 1.0,
+        padding: compact ? const EdgeInsets.all(14) : const EdgeInsets.all(18),
+        onActivate: () => navigateToHome(context, profile),
+        onLongPress: () => _openAddProfile(context, existing: profile),
+        child: compact
+            ? FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: cardWidth - 28,
+                  child: _ProfileCardBody(profile: profile, compact: true),
+                ),
+              )
+            : _ProfileCardBody(profile: profile, compact: false),
+      );
+      editButton = NeonFocusCard(
+        padding: EdgeInsets.zero,
+        borderRadius: 14,
+        focusedScale: 1.0,
+        unfocusedOpacity: 0.85,
+        glowColor: AppColors.neonCyan,
+        onActivate: () => _openAddProfile(context, existing: profile),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.edit_outlined, color: AppColors.neonCyan, size: 22),
+            SizedBox(width: 8),
+            Text(
+              'Düzenle',
+              style: TextStyle(
+                color: AppColors.neonCyan,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    const double actionHeight = 42;
+    return SizedBox(
+      width: cardWidth,
+      child: Column(
+        children: [
+          if (expand)
+            Expanded(child: card)
+          else
+            SizedBox(width: cardWidth, height: cardHeight, child: card),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: actionHeight,
+            width: cardWidth,
+            child: editButton ?? const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openAddProfile(BuildContext context, {ProfileModel? existing}) async {
     await Navigator.of(context).push(
       PageRouteBuilder<void>(
@@ -123,16 +234,20 @@ class ProfileSelectionPage extends StatelessWidget {
                         }
                         final ProfileLoaded loaded = state as ProfileLoaded;
                         final bool phone = FormFactor.isPhoneOf(context);
+                        final bool desktop = FormFactor.isDesktopOf(context);
                         final int itemCount = loaded.profiles.length + (phone ? 1 : 2);
                         final double cardWidth = AppLayout.profileCardWidth(context);
+                        final double cardHeight = AppLayout.profileCardHeight(context);
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               loaded.profiles.isEmpty
-                                  ? (phone
-                                      ? 'Kayıtlı profil bulunmamaktadır. Yeni profil ekleyiniz.'
-                                      : 'Kayıtlı profil bulunmamaktadır. Kumanda ile veya telefondaki karekod ile yeni profil ekleyiniz.')
+                                  ? (desktop
+                                      ? 'Kayıtlı profil yok. Yeni profil eklemek için kutuya tıklayınız.'
+                                      : phone
+                                          ? 'Kayıtlı profil bulunmamaktadır. Yeni profil ekleyiniz.'
+                                          : 'Kayıtlı profil bulunmamaktadır. Kumanda ile veya telefondaki karekod ile yeni profil ekleyiniz.')
                                   : 'Kullanmak istediğiniz yayın profilini seçiniz.',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -143,7 +258,31 @@ class ProfileSelectionPage extends StatelessWidget {
                             ),
                             SizedBox(height: phone ? 8 : 18),
                             Expanded(
-                              child: ListView.separated(
+                              child: desktop
+                                  ? Align(
+                                      alignment: Alignment.topLeft,
+                                      child: SizedBox(
+                                        height: cardHeight + 56,
+                                        child: ListView.separated(
+                                          clipBehavior: Clip.none,
+                                          scrollDirection: Axis.horizontal,
+                                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                                          itemCount: itemCount,
+                                          separatorBuilder: (context, index) =>
+                                              const SizedBox(width: 20),
+                                          itemBuilder: (context, index) => _profileSlot(
+                                            context,
+                                            loaded: loaded,
+                                            index: index,
+                                            cardWidth: cardWidth,
+                                            cardHeight: cardHeight,
+                                            expand: true,
+                                            compact: true,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : ListView.separated(
                                 clipBehavior: Clip.none,
                                 scrollDirection: Axis.horizontal,
                                 padding: EdgeInsets.symmetric(
@@ -152,142 +291,25 @@ class ProfileSelectionPage extends StatelessWidget {
                                 ),
                                 itemCount: itemCount,
                                 separatorBuilder: (context, index) => const SizedBox(width: 22),
-                                itemBuilder: (context, index) {
-                                  final bool isAddCard = index == loaded.profiles.length;
-                                  final bool isQrCard = index == loaded.profiles.length + 1;
-                                  if (isAddCard) {
-                                    return SizedBox(
-                                      width: cardWidth,
-                                      child: Column(
-                                        children: [
-                                          Expanded(
-                                            child: NeonFocusCard(
-                                              autofocus: loaded.profiles.isEmpty,
-                                              glowColor: AppColors.neonPurple,
-                                              padding: phone
-                                                  ? const EdgeInsets.all(10)
-                                                  : const EdgeInsets.all(18),
-                                              onActivate: () => _openAddProfile(context),
-                                              child: phone
-                                                  ? FittedBox(
-                                                      fit: BoxFit.scaleDown,
-                                                      child: _AddProfileCardBody(compact: true),
-                                                    )
-                                                  : const _AddProfileCardBody(compact: false),
-                                            ),
-                                          ),
-                                          SizedBox(height: phone ? 6 : 10),
-                                          SizedBox(height: phone ? 36 : 46),
-                                        ],
-                                      ),
-                                    );
-                                  }
-                                  if (isQrCard) {
-                                    if (phone) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    return SizedBox(
-                                      width: cardWidth,
-                                      child: Column(
-                                        children: [
-                                          Expanded(
-                                            child: NeonFocusCard(
-                                              glowColor: AppColors.neonCyan,
-                                              padding: phone
-                                                  ? const EdgeInsets.all(10)
-                                                  : const EdgeInsets.all(18),
-                                              onActivate: () => _openQrProfile(context),
-                                              child: const _QrProfileCardBody(),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          const SizedBox(height: 46),
-                                        ],
-                                      ),
-                                    );
-                                  }
-
-                                  final ProfileModel profile = loaded.profiles[index];
-                                  final bool isXtream = profile.type == ProfileType.xtream;
-                                  return SizedBox(
-                                    width: cardWidth,
-                                    child: Column(
-                                      children: [
-                                        Expanded(
-                                          child: NeonFocusCard(
-                                            autofocus: index == 0,
-                                            glowColor: isXtream
-                                                ? AppColors.neonCyan
-                                                : AppColors.neonPurple,
-                                            padding: phone
-                                                ? const EdgeInsets.all(10)
-                                                : const EdgeInsets.all(18),
-                                            onActivate: () => navigateToHome(context, profile),
-                                            onLongPress: () =>
-                                                _openAddProfile(context, existing: profile),
-                                            child: phone
-                                                ? FittedBox(
-                                                    fit: BoxFit.scaleDown,
-                                                    alignment: Alignment.centerLeft,
-                                                    child: SizedBox(
-                                                      width: cardWidth - 28,
-                                                      child: _ProfileCardBody(
-                                                        profile: profile,
-                                                        compact: true,
-                                                      ),
-                                                    ),
-                                                  )
-                                                : _ProfileCardBody(
-                                                    profile: profile,
-                                                    compact: false,
-                                                  ),
-                                          ),
-                                        ),
-                                        SizedBox(height: phone ? 8 : 20),
-                                        SizedBox(
-                                          height: phone ? 36 : 46,
-                                          child: NeonFocusCard(
-                                            padding: EdgeInsets.zero,
-                                            borderRadius: 14,
-                                            focusedScale: 1.06,
-                                            unfocusedOpacity: 0.85,
-                                            glowColor: AppColors.neonCyan,
-                                            onActivate: () =>
-                                                _openAddProfile(context, existing: profile),
-                                            child: const Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.edit_outlined,
-                                                  color: AppColors.neonCyan,
-                                                  size: 22,
-                                                ),
-                                                SizedBox(width: 8),
-                                                Text(
-                                                  'Düzenle',
-                                                  style: TextStyle(
-                                                    color: AppColors.neonCyan,
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w800,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
+                                itemBuilder: (context, index) => _profileSlot(
+                                  context,
+                                  loaded: loaded,
+                                  index: index,
+                                  cardWidth: cardWidth,
+                                  expand: true,
+                                  compact: phone,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              phone
-                                  ? 'Düzenlemek için kartın altındaki Düzenle düğmesine basınız.'
-                                  : 'Düzenlemek veya silmek için kartın altındaki "Düzenle" düğmesine '
-                                      'ilerleyiniz. Kart üzerinde OK tuşunu basılı tutmak da düzenlemeyi açar.',
-                              maxLines: 1,
+                              desktop
+                                  ? 'Düzenlemek için kartın altındaki Düzenle düğmesine tıklayınız.'
+                                  : phone
+                                      ? 'Düzenlemek için kartın altındaki Düzenle düğmesine basınız.'
+                                      : 'Düzenlemek veya silmek için kartın altındaki "Düzenle" düğmesine '
+                                          'ilerleyiniz. Kart üzerinde OK tuşunu basılı tutmak da düzenlemeyi açar.',
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: phone ? 12 : 14,

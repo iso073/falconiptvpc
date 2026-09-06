@@ -30,7 +30,7 @@ class _PinEntryDialog extends StatefulWidget {
 
 class _PinEntryDialogState extends State<_PinEntryDialog> {
   // The dialog can be opened by a held OK press; ignore that same press.
-  final DateTime _acceptingFrom = FormFactor.isPhone
+  final DateTime _acceptingFrom = FormFactor.usesPointer
       ? DateTime.now()
       : DateTime.now().add(const Duration(milliseconds: 600));
 

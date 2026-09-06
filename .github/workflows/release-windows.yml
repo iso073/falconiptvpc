@@ -1,0 +1,42 @@
+name: Release Windows
+
+on:
+  push:
+    tags:
+      - "v*"
+      - "pc-v*"
+      - "windows-*"
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Build Windows
+        run: |
+          flutter pub get
+          flutter build windows --release
+
+      - name: Package falcontvpc assets
+        shell: pwsh
+        run: .\tool\package_windows_release.ps1
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Falcon IPTV PC ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            build/windows/release-assets/falcontvpc.exe
+            build/windows/release-assets/falcontvpc.zip
+          fail_on_unmatched_files: true

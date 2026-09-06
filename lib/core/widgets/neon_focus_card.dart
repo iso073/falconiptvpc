@@ -52,6 +52,7 @@ class _NeonFocusCardState extends State<NeonFocusCard> {
   FocusNode get _focusNode => widget.focusNode ?? _ownedNode;
   bool _focused = false;
   bool _pressed = false;
+  bool _hovered = false;
   Timer? _holdTimer;
   Timer? _releaseTimer;
   bool _pressing = false;
@@ -172,59 +173,72 @@ class _NeonFocusCardState extends State<NeonFocusCard> {
   @override
   Widget build(BuildContext context) {
     final bool phone = FormFactor.isPhoneOf(context);
-    final bool highlighted = phone ? _pressed : _focused;
-    final double opacity = phone ? 1 : (_focused ? 1 : widget.unfocusedOpacity);
-    final double scale = phone ? (highlighted ? 0.98 : 1) : (_focused ? widget.focusedScale : 1);
+    final bool desktop = FormFactor.isDesktopOf(context);
+    final bool pointer = FormFactor.usesPointerOf(context);
+    final bool highlighted = phone ? _pressed : (_focused || _hovered);
+    final double opacity = (phone || desktop) ? 1 : (highlighted ? 1 : widget.unfocusedOpacity);
+    // Desktop must not scale up: hover glow would overflow neighbors and footer buttons.
+    final double scale = desktop
+        ? 1
+        : phone
+            ? (highlighted ? 0.98 : 1)
+            : (highlighted ? widget.focusedScale : 1);
+    final Duration duration = Duration(milliseconds: phone || desktop ? 160 : 300);
     return Focus(
       focusNode: _focusNode,
       autofocus: widget.autofocus,
       onKeyEvent: _onKeyEvent,
-      child: GestureDetector(
-        onTapDown: phone ? (_) => setState(() => _pressed = true) : null,
-        onTapCancel: phone ? () => setState(() => _pressed = false) : null,
-        onTapUp: phone ? (_) => setState(() => _pressed = false) : null,
-        onTap: () {
-          _focusNode.requestFocus();
-          widget.onActivate?.call();
-        },
-        onLongPress: widget.onLongPress == null
-            ? null
-            : () {
-                _focusNode.requestFocus();
-                widget.onLongPress!.call();
-              },
-        child: AnimatedScale(
-          scale: scale,
-          duration: Duration(milliseconds: phone ? 180 : 300),
-          curve: Curves.easeOutCubic,
-          child: AnimatedOpacity(
-            duration: Duration(milliseconds: phone ? 180 : 300),
-            opacity: opacity,
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: phone ? 180 : 300),
-              curve: Curves.easeOutCubic,
-              width: widget.width,
-              height: widget.height,
-              padding: widget.padding,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceElevated,
-                borderRadius: BorderRadius.circular(widget.borderRadius),
-                border: Border.all(
-                  color: highlighted ? widget.glowColor : AppColors.glassBorder,
-                  width: highlighted ? (phone ? 2.4 : 3) : (phone ? 1.4 : 3),
+      child: MouseRegion(
+        cursor: pointer ? SystemMouseCursors.click : MouseCursor.defer,
+        onEnter: pointer ? (_) => setState(() => _hovered = true) : null,
+        onExit: pointer ? (_) => setState(() => _hovered = false) : null,
+        child: GestureDetector(
+          onTapDown: pointer ? (_) => setState(() => _pressed = true) : null,
+          onTapCancel: pointer ? () => setState(() => _pressed = false) : null,
+          onTapUp: pointer ? (_) => setState(() => _pressed = false) : null,
+          onTap: () {
+            _focusNode.requestFocus();
+            widget.onActivate?.call();
+          },
+          onLongPress: widget.onLongPress == null
+              ? null
+              : () {
+                  _focusNode.requestFocus();
+                  widget.onLongPress!.call();
+                },
+          child: AnimatedScale(
+            scale: scale,
+            duration: duration,
+            curve: Curves.easeOutCubic,
+            child: AnimatedOpacity(
+              duration: duration,
+              opacity: opacity,
+              child: AnimatedContainer(
+                duration: duration,
+                curve: Curves.easeOutCubic,
+                width: widget.width,
+                height: widget.height,
+                padding: widget.padding,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  border: Border.all(
+                    color: highlighted ? widget.glowColor : AppColors.glassBorder,
+                    width: highlighted ? (desktop ? 2.2 : phone ? 2.4 : 3) : (phone || desktop ? 1.4 : 3),
+                  ),
+                  boxShadow: highlighted
+                      ? [
+                          BoxShadow(
+                            color: widget.glowColor.withValues(alpha: desktop ? 0.22 : phone ? 0.28 : 0.45),
+                            blurRadius: desktop ? 10 : phone ? 10 : 16,
+                            spreadRadius: 0,
+                            offset: Offset.zero,
+                          ),
+                        ]
+                      : const [],
                 ),
-                boxShadow: highlighted
-                    ? [
-                        BoxShadow(
-                          color: widget.glowColor.withValues(alpha: phone ? 0.28 : 0.45),
-                          blurRadius: phone ? 10 : 16,
-                          spreadRadius: 0,
-                          offset: Offset.zero,
-                        ),
-                      ]
-                    : const [],
+                child: widget.child,
               ),
-              child: widget.child,
             ),
           ),
         ),

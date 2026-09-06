@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "falconiptv" "\0"
+            VALUE "CompanyName", "Falcon IPTV" "\0"
+            VALUE "FileDescription", "Falcon IPTV" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "falconiptv" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
+            VALUE "InternalName", "Falcon IPTV" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Falcon IPTV. All rights reserved." "\0"
             VALUE "OriginalFilename", "falconiptv.exe" "\0"
-            VALUE "ProductName", "falconiptv" "\0"
+            VALUE "ProductName", "Falcon IPTV" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

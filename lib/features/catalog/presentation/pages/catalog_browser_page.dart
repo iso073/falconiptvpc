@@ -237,7 +237,7 @@ class _CatalogBrowserView extends StatelessWidget {
         SizedBox(
           width: AppLayout.categoryRail(context),
           child: ListView.separated(
-            clipBehavior: AppLayout.phone(context) ? Clip.hardEdge : Clip.none,
+            clipBehavior: AppLayout.catalogClip(context),
             padding: EdgeInsets.symmetric(
               vertical: AppLayout.phone(context) ? 4 : 8,
               horizontal: AppLayout.phone(context) ? 2 : 6,
@@ -298,7 +298,7 @@ class _CatalogBrowserView extends StatelessWidget {
                   ),
                 )
               : GridView.builder(
-                  clipBehavior: AppLayout.phone(context) ? Clip.hardEdge : Clip.none,
+                  clipBehavior: AppLayout.catalogClip(context),
                   padding: EdgeInsets.symmetric(
                     vertical: AppLayout.phone(context) ? 4 : 8,
                     horizontal: AppLayout.phone(context) ? 2 : 6,
