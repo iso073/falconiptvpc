@@ -138,7 +138,7 @@ abstract final class AppUpdateFlow {
         Navigator.of(context, rootNavigator: true).pop();
         TvToastService.show(
           context,
-          'Paket indirildi. Klasör açılıyor; yeni exe ile değiştiriniz.',
+          'Paket indirildi. Klasör açılıyor; zip’i mevcut kurulumun üzerine çıkarınız.',
           type: TvToastType.success,
         );
       }

@@ -129,6 +129,11 @@ void main() {
             'browser_download_url': 'https://example.com/falcontvpc.exe',
             'size': 88000000,
           },
+          <String, Object>{
+            'name': 'falcontvpc.zip',
+            'browser_download_url': 'https://example.com/falcontvpc.zip',
+            'size': 92000000,
+          },
         ],
       },
       preferredAsset: AppUpdateConfig.windowsAssetName,
@@ -136,8 +141,8 @@ void main() {
       allowedExtensions: AppUpdateConfig.windowsExtensions,
     );
     expect(release, isNotNull);
-    expect(release!.apkUrl, 'https://example.com/falcontvpc.exe');
-    expect(release.cacheFileName, 'falconiptv-pc-v1.0.1.exe');
+    expect(release!.apkUrl, 'https://example.com/falcontvpc.zip');
+    expect(release.cacheFileName, 'falconiptv-pc-v1.0.1.zip');
     expect(release.version.name, '1.0.1');
     expect(release.version.isNewerThan(AppVersionInfo.current), isTrue);
   });

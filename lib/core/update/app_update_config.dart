@@ -5,13 +5,13 @@ abstract final class AppUpdateConfig {
   static const String githubOwner = 'iso073';
   static const String githubRepo = 'falconiptvpc';
   static const String apkAssetName = 'falconiptv.apk';
-  static const String windowsAssetName = 'falcontvpc.exe';
+  static const String windowsAssetName = 'falcontvpc.zip';
   static const List<String> windowsAssetNames = <String>[
+    'falcontvpc.zip',
+    'falconiptv-windows.zip',
     'falcontvpc.exe',
     'falconiptv.exe',
     'falconiptv-windows.exe',
-    'falconiptv-windows.zip',
-    'falcontvpc.zip',
   ];
   static const List<String> windowsExtensions = <String>['.exe', '.msi', '.zip', '.7z'];
   static const List<String> androidExtensions = <String>['.apk'];
@@ -166,35 +166,44 @@ class GithubReleaseInfo {
     if (assetsRaw is! List) {
       return null;
     }
-    String? url;
-    int size = 0;
     final List<String> preferred = <String>[
       if (preferredAsset.isNotEmpty) preferredAsset.toLowerCase(),
       ...preferredNames.map((String name) => name.toLowerCase()),
     ];
-    for (final Object? asset in assetsRaw) {
-      if (asset is! Map) {
-        continue;
+    final List<Map<String, dynamic>> assets = <Map<String, dynamic>>[
+      for (final Object? asset in assetsRaw)
+        if (asset is Map) Map<String, dynamic>.from(asset),
+    ];
+
+    Map<String, dynamic>? chosen;
+    for (final String want in preferred) {
+      for (final Map<String, dynamic> asset in assets) {
+        final String name = '${asset['name'] ?? ''}'.toLowerCase();
+        final String browser = '${asset['browser_download_url'] ?? ''}';
+        if (name == want && browser.isNotEmpty && _hasAllowedExtension(name, allowedExtensions)) {
+          chosen = asset;
+          break;
+        }
       }
-      final String name = '${asset['name'] ?? ''}'.toLowerCase();
-      final String browser = '${asset['browser_download_url'] ?? ''}';
-      if (browser.isEmpty || !_hasAllowedExtension(name, allowedExtensions)) {
-        continue;
-      }
-      final int assetSize = int.tryParse('${asset['size'] ?? ''}') ?? 0;
-      if (preferred.contains(name)) {
-        url = browser;
-        size = assetSize;
+      if (chosen != null) {
         break;
       }
-      url ??= browser;
-      if (url == browser) {
-        size = assetSize;
+    }
+    if (chosen == null) {
+      for (final Map<String, dynamic> asset in assets) {
+        final String name = '${asset['name'] ?? ''}'.toLowerCase();
+        final String browser = '${asset['browser_download_url'] ?? ''}';
+        if (browser.isNotEmpty && _hasAllowedExtension(name, allowedExtensions)) {
+          chosen = asset;
+          break;
+        }
       }
     }
-    if (url == null) {
+    if (chosen == null) {
       return null;
     }
+    final String url = '${chosen['browser_download_url']}';
+    final int size = int.tryParse('${chosen['size'] ?? ''}') ?? 0;
     return GithubReleaseInfo(
       tag: tag,
       version: AppVersionInfo.parse(tag),

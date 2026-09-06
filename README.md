@@ -25,7 +25,7 @@ flutter build windows
 
 PC güncellemeleri [iso073/falconiptvpc](https://github.com/iso073/falconiptvpc) GitHub Releases üzerinden alınır. TV downloader deposuna (`iso073/falconiptv`) bağlanılmaz.
 
-Uygulama `releases/latest` içinden `falcontvpc.exe` (veya `falcontvpc.zip`) arar. Yeni sürüm için etiket `v1.0.1+2` gibi `pubspec.yaml` sürümüyle aynı olmalıdır:
+Uygulama `releases/latest` içinden önce `falcontvpc.zip` (tam Windows klasörü) arar. Yeni sürüm için etiket `v1.0.1+2` gibi `pubspec.yaml` sürümüyle aynı olmalıdır:
 
 ```bash
 flutter build windows --release
