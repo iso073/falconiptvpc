@@ -2,7 +2,7 @@ name: falconiptv
 description: "Windows masaüstü için Falcon IPTV istemcisi. Aynı Xtream/M3U motoru ve tema."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.13.2

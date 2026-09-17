@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,6 +11,8 @@ import '../../../../core/network/iptv_dio_client.dart';
 import '../../../../core/playback/playback_keep_awake.dart';
 import '../../../../core/services/tv_toast_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/desktop/desktop_player_actions.dart';
+import '../../../../core/desktop/desktop_window_service.dart';
 import '../../../../core/device/app_layout.dart';
 import '../../../../core/device/form_factor.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
@@ -55,11 +58,16 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
   Timer? _seekTimer;
   Timer? _okHoldTimer;
   Timer? _okReleaseTimer;
+  Timer? _sleepTimer;
+  Timer? _sleepTick;
   bool _okPressing = false;
   bool _okLongPressFired = false;
   Duration? _pendingSeek;
   bool _channelListVisible = false;
   bool _tracksVisible = false;
+  bool _helpVisible = false;
+  int _sleepMinutes = 0;
+  DateTime? _sleepUntil;
   List<MediaTrack> _audioTracks = const <MediaTrack>[];
   List<MediaTrack> _subtitleTracks = const <MediaTrack>[];
   String _selectedAudio = 'Varsayılan';
@@ -117,6 +125,8 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
     _osdTimer?.cancel();
     _progressTimer?.cancel();
     _seekTimer?.cancel();
+    _sleepTimer?.cancel();
+    _sleepTick?.cancel();
     _resetOkPress();
     final VideoPlayerController? current = _controller;
     final VideoPlayerController? opening = _opening;
@@ -160,6 +170,8 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
     _progressTimer?.cancel();
     _osdTimer?.cancel();
     _seekTimer?.cancel();
+    _sleepTimer?.cancel();
+    _sleepTick?.cancel();
     unawaited(PlaybackKeepAwake.disable());
     final VideoPlayerController? current = _controller;
     final VideoPlayerController? opening = _opening;
@@ -654,6 +666,151 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
     }
   }
 
+  Future<void> _copyStreamUrl() async {
+    final String url = _current.streamUrl.trim();
+    if (url.isEmpty) {
+      TvToastService.show(context, 'Kopyalanacak yayın adresi yok.');
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: url));
+    if (!mounted) {
+      return;
+    }
+    TvToastService.show(
+      context,
+      'Yayın adresi panoya kopyalandı.',
+      type: TvToastType.success,
+    );
+    _showOsd();
+  }
+
+  Future<void> _toggleFullscreen() async {
+    await DesktopWindowService.toggleFullscreen();
+    if (mounted) {
+      _showOsd();
+    }
+  }
+
+  void _cycleSleepTimer() {
+    final int next = DesktopPlayerActions.nextSleepMinutes(_sleepMinutes);
+    _sleepTimer?.cancel();
+    _sleepTick?.cancel();
+    setState(() {
+      _sleepMinutes = next;
+      _sleepUntil = next <= 0 ? null : DateTime.now().add(Duration(minutes: next));
+    });
+    if (next <= 0) {
+      TvToastService.show(context, 'Uyku zamanlayıcısı kapatıldı.');
+      _showOsd();
+      return;
+    }
+    _sleepTimer = Timer(Duration(minutes: next), () {
+      unawaited(_onSleepFired());
+    });
+    _sleepTick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {});
+    });
+    TvToastService.show(
+      context,
+      'Uyku zamanlayıcısı: ${DesktopPlayerActions.sleepLabel(next)}',
+      type: TvToastType.success,
+    );
+    _showOsd();
+  }
+
+  Future<void> _onSleepFired() async {
+    _sleepTimer?.cancel();
+    _sleepTick?.cancel();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _sleepMinutes = 0;
+      _sleepUntil = null;
+    });
+    _saveProgress();
+    await _stopPlayback();
+    if (mounted) {
+      await popToPreviousPage(context);
+    }
+  }
+
+  String? get _sleepRemainingLabel {
+    final DateTime? until = _sleepUntil;
+    if (until == null) {
+      return null;
+    }
+    final Duration left = until.difference(DateTime.now());
+    if (left.isNegative) {
+      return 'Uyku';
+    }
+    final int minutes = left.inMinutes;
+    final int seconds = left.inSeconds % 60;
+    return 'Uyku ${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _toggleHelp() async {
+    if (_helpVisible) {
+      Navigator.of(context).pop();
+      return;
+    }
+    _osdTimer?.cancel();
+    setState(() {
+      _helpVisible = true;
+      _osdVisible = true;
+    });
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.72),
+      builder: (dialogContext) {
+        bool closed = false;
+        void closeHelp() {
+          if (closed || !dialogContext.mounted) {
+            return;
+          }
+          closed = true;
+          Navigator.of(dialogContext).pop();
+        }
+
+        return Focus(
+          autofocus: true,
+          onKeyEvent: (FocusNode node, KeyEvent event) {
+            if (event is KeyDownEvent) {
+              closeHelp();
+            }
+            return KeyEventResult.handled;
+          },
+          child: GestureDetector(
+            onTap: closeHelp,
+            child: const _DesktopHelpOverlay(),
+          ),
+        );
+      },
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _helpVisible = false);
+    _showOsd();
+  }
+
+  void _onPointerScroll(PointerScrollEvent event) {
+    if (_channelListVisible || _tracksVisible || _helpVisible) {
+      return;
+    }
+    if (event.scrollDelta.dy == 0) {
+      return;
+    }
+    if (_isOnDemand) {
+      _seekBy(Duration(seconds: event.scrollDelta.dy > 0 ? 10 : -10));
+      return;
+    }
+    unawaited(_zap(event.scrollDelta.dy > 0 ? 1 : -1));
+  }
+
   static const Duration _okLongPressThreshold = Duration(milliseconds: 500);
   static const Duration _okReleaseGrace = Duration(milliseconds: 180);
 
@@ -733,6 +890,27 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
     final bool isPress = event is KeyDownEvent || event is KeyRepeatEvent;
     if (!isPress) {
       return KeyEventResult.ignored;
+    }
+
+    if (key == LogicalKeyboardKey.f1 || key == LogicalKeyboardKey.slash) {
+      unawaited(_toggleHelp());
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.f11 || key == LogicalKeyboardKey.keyF) {
+      unawaited(_toggleFullscreen());
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.keyC) {
+      unawaited(_copyStreamUrl());
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.keyT) {
+      _cycleSleepTimer();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.space) {
+      _togglePlayPause();
+      return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.mediaPlayPause ||
@@ -845,15 +1023,25 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
           _closeTracks();
           return;
         }
+        if (_helpVisible) {
+          setState(() => _helpVisible = false);
+          return;
+        }
         _saveProgress();
         await _stopPlayback();
-        if (mounted) {
+        if (context.mounted) {
           await popToPreviousPage(context);
         }
       },
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: Focus(
+        body: Listener(
+          onPointerSignal: (PointerSignalEvent event) {
+            if (event is PointerScrollEvent) {
+              _onPointerScroll(event);
+            }
+          },
+          child: Focus(
           autofocus: !_channelListVisible && !_tracksVisible,
           canRequestFocus: !_channelListVisible && !_tracksVisible,
           skipTraversal: _channelListVisible || _tracksVisible,
@@ -958,9 +1146,13 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
                                 ),
                               ),
                               Text(
-                                _isOnDemand && duration > Duration.zero
-                                    ? '${_formatDuration(position)} / ${_formatDuration(duration)}'
-                                    : 'CANLI',
+                                [
+                                  if (_isOnDemand && duration > Duration.zero)
+                                    '${_formatDuration(position)} / ${_formatDuration(duration)}'
+                                  else
+                                    'CANLI',
+                                  ?_sleepRemainingLabel,
+                                ].join('  •  '),
                                 style: TextStyle(
                                   color: _pendingSeek != null
                                       ? AppColors.neonCyan
@@ -1009,6 +1201,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
                               isOnDemand: _isOnDemand,
                               isPaused: isPaused,
                               canZap: widget.playlist.length > 1,
+                              showDesktopExtras: FormFactor.isDesktopOf(context),
                               onRewind: () => _seekBy(const Duration(seconds: -10)),
                               onForward: () => _seekBy(const Duration(seconds: 10)),
                               onPlayPause: _togglePlayPause,
@@ -1016,6 +1209,10 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
                               onNext: () => _zap(1),
                               onChannels: _openChannelList,
                               onTracks: _openTracks,
+                              onCopy: _copyStreamUrl,
+                              onSleep: _cycleSleepTimer,
+                              onFullscreen: _toggleFullscreen,
+                              onHelp: _toggleHelp,
                             )
                           else
                             Text(
@@ -1086,6 +1283,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
             ],
           ),
         ),
+        ),
       ),
     );
   }
@@ -1103,11 +1301,17 @@ class _PhoneTransportBar extends StatelessWidget {
     required this.onNext,
     required this.onChannels,
     required this.onTracks,
+    this.showDesktopExtras = false,
+    this.onCopy,
+    this.onSleep,
+    this.onFullscreen,
+    this.onHelp,
   });
 
   final bool isOnDemand;
   final bool isPaused;
   final bool canZap;
+  final bool showDesktopExtras;
   final VoidCallback onRewind;
   final VoidCallback onForward;
   final VoidCallback onPlayPause;
@@ -1115,6 +1319,10 @@ class _PhoneTransportBar extends StatelessWidget {
   final VoidCallback onNext;
   final VoidCallback onChannels;
   final VoidCallback onTracks;
+  final VoidCallback? onCopy;
+  final VoidCallback? onSleep;
+  final VoidCallback? onFullscreen;
+  final VoidCallback? onHelp;
 
   @override
   Widget build(BuildContext context) {
@@ -1138,6 +1346,16 @@ class _PhoneTransportBar extends StatelessWidget {
         ],
         const SizedBox(width: 10),
         _btn(Icons.subtitles_outlined, onTracks),
+        if (showDesktopExtras) ...[
+          const SizedBox(width: 10),
+          if (onCopy != null) _btn(Icons.copy_rounded, onCopy!),
+          if (onCopy != null) const SizedBox(width: 10),
+          if (onSleep != null) _btn(Icons.bedtime_outlined, onSleep!),
+          if (onSleep != null) const SizedBox(width: 10),
+          if (onFullscreen != null) _btn(Icons.fullscreen_rounded, onFullscreen!),
+          if (onFullscreen != null) const SizedBox(width: 10),
+          if (onHelp != null) _btn(Icons.help_outline_rounded, onHelp!),
+        ],
       ],
     );
   }
@@ -1153,6 +1371,80 @@ class _PhoneTransportBar extends StatelessWidget {
           width: 48,
           height: 40,
           child: Icon(icon, color: AppColors.neonCyan),
+        ),
+      ),
+    );
+  }
+}
+
+class _DesktopHelpOverlay extends StatelessWidget {
+  const _DesktopHelpOverlay();
+
+  static const List<(String, String)> _rows = <(String, String)>[
+    ('Boşluk', 'Oynat / duraklat'),
+    ('F11 veya F', 'Tam ekran'),
+    ('C', 'Yayın adresini kopyala'),
+    ('T', 'Uyku zamanlayıcısı'),
+    ('F1 veya ?', 'Bu yardım'),
+    ('Tekerlek', 'Kanal değiştir / 10 sn atla'),
+    ('Esc', 'Bu paneli kapat'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.neonCyan.withValues(alpha: 0.45), width: 2),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(28, 24, 28, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'PC Kısayolları',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 16),
+                for (final (String key, String action) in _rows) ...[
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 160,
+                        child: Text(
+                          key,
+                          style: const TextStyle(
+                            color: AppColors.neonCyan,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(action, style: const TextStyle(fontSize: 16)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                const SizedBox(height: 4),
+                const Text(
+                  'Esc yalnızca bu paneli kapatır; yayın açık kalır.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

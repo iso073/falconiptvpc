@@ -8,6 +8,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/constants/hive_bootstrap.dart';
 import 'core/constants/hive_boxes.dart';
+import 'core/desktop/desktop_session.dart';
 import 'core/device/form_factor.dart';
 import 'core/network/iptv_dio_client.dart';
 import 'core/remote/falcon_navigator.dart';
@@ -22,6 +23,7 @@ import 'features/library/data/favorites_repository.dart';
 import 'features/library/data/watch_progress_repository.dart';
 import 'features/profile/data/repositories/profile_repository.dart';
 import 'features/profile/presentation/cubit/profile_cubit.dart';
+import 'features/settings/data/desktop_settings_repository.dart';
 import 'features/settings/data/parental_control_repository.dart';
 import 'features/settings/data/sport_mode_repository.dart';
 import 'features/settings/presentation/cubit/sport_mode_cubit.dart';
@@ -36,7 +38,7 @@ class FalconIptvApp extends StatefulWidget {
   State<FalconIptvApp> createState() => _FalconIptvAppState();
 }
 
-class _FalconIptvAppState extends State<FalconIptvApp> {
+class _FalconIptvAppState extends State<FalconIptvApp> with WidgetsBindingObserver {
   late final Dio _dio;
   late final XtreamRepository _xtreamRepository;
   late final M3uRepository _m3uRepository;
@@ -47,6 +49,7 @@ class _FalconIptvAppState extends State<FalconIptvApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _dio = IptvDioClient.create();
     _xtreamRepository = XtreamRepository(_dio);
     _m3uRepository = M3uRepository(_dio);
@@ -75,10 +78,32 @@ class _FalconIptvAppState extends State<FalconIptvApp> {
     if (mounted) {
       setState(() => _boxesReady = true);
     }
+    unawaited(
+      DesktopSession.apply(
+        DesktopSettingsRepository(Hive.box<dynamic>(HiveBoxes.settings)),
+      ),
+    );
+  }
+
+  DesktopSettingsRepository get _desktopSettings {
+    return DesktopSettingsRepository(Hive.box<dynamic>(HiveBoxes.settings));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_boxesReady) {
+      return;
+    }
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      unawaited(DesktopSession.persistBounds(_desktopSettings));
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _dio.close(force: true);
     super.dispose();
   }
@@ -116,6 +141,9 @@ class _FalconIptvAppState extends State<FalconIptvApp> {
         ),
         RepositoryProvider<SportModeRepository>(
           create: (_) => SportModeRepository(Hive.box<dynamic>(HiveBoxes.settings)),
+        ),
+        RepositoryProvider<DesktopSettingsRepository>(
+          create: (_) => DesktopSettingsRepository(Hive.box<dynamic>(HiveBoxes.settings)),
         ),
       ],
       child: MultiBlocProvider(

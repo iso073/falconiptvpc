@@ -9,6 +9,8 @@ TV ve telefon için yazılan Falcon IPTV uygulamasının Windows masaüstü sür
 - Çoklu profil, favoriler, arama, kaldığı yerden devam
 - Spor modu, ebeveyn PIN, QR ile profil ekleme
 - Fare, klavye ve geniş pencere düzeni
+- Her zaman üstte, Windows ile başlat, pencere konumunu hatırla
+- Oynatıcı: tam ekran, uyku zamanlayıcısı, yayın URL kopyalama, tekerlek ile kanal
 
 ## Çalıştırma
 

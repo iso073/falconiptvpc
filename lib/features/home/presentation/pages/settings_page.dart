@@ -7,7 +7,10 @@ import '../../../../core/update/app_update_config.dart';
 import '../../../../core/update/app_update_flow.dart';
 import '../../../../core/update/app_update_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/desktop/desktop_session.dart';
+import '../../../../core/desktop/desktop_window_service.dart';
 import '../../../../core/device/app_layout.dart';
+import '../../../../core/device/form_factor.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/falcon_logo.dart';
 import '../../../../core/widgets/glassmorphism_bar.dart';
@@ -17,6 +20,7 @@ import '../../../profile/data/models/profile_model.dart';
 import '../../../profile/presentation/cubit/profile_cubit.dart';
 import '../../../profile/presentation/pages/profile_selection_page.dart';
 import '../../../remote/presentation/pages/phone_remote_page.dart';
+import '../../../settings/data/desktop_settings_repository.dart';
 import '../../../settings/data/parental_control_repository.dart';
 import '../../../settings/presentation/cubit/sport_mode_cubit.dart';
 import '../../../settings/presentation/widgets/pin_entry_dialog.dart';
@@ -31,6 +35,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   ParentalControlRepository get _parental => context.read<ParentalControlRepository>();
+  DesktopSettingsRepository get _desktop => context.read<DesktopSettingsRepository>();
 
   Future<bool> _verifyCurrentPin() async {
     final String? entered = await showPinEntryDialog(
@@ -136,6 +141,53 @@ class _SettingsPageState extends State<SettingsPage> {
     TvToastService.show(
       context,
       'Spor modu açıldı. Yeni yayında uzun tampon kullanılır.',
+      type: TvToastType.success,
+    );
+  }
+
+  Future<void> _toggleAlwaysOnTop() async {
+    final bool next = !_desktop.alwaysOnTop;
+    await _desktop.setAlwaysOnTop(next);
+    await DesktopWindowService.setAlwaysOnTop(next);
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+    TvToastService.show(
+      context,
+      next ? 'Pencere diğer uygulamaların üstünde tutulur.' : 'Üstte tutma kapatıldı.',
+      type: TvToastType.success,
+    );
+  }
+
+  Future<void> _toggleStartWithWindows() async {
+    final bool next = !_desktop.startWithWindows;
+    await _desktop.setStartWithWindows(next);
+    await DesktopWindowService.setStartWithWindows(next);
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+    TvToastService.show(
+      context,
+      next ? 'Falcon IPTV, Windows açılışında başlar.' : 'Açılışta başlatma kapatıldı.',
+      type: TvToastType.success,
+    );
+  }
+
+  Future<void> _toggleRememberWindow() async {
+    final bool next = !_desktop.rememberWindow;
+    await _desktop.setRememberWindow(next);
+    if (next) {
+      await DesktopSession.persistBounds(_desktop);
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+    TvToastService.show(
+      context,
+      next ? 'Pencere boyutu ve konumu hatırlanacak.' : 'Pencere konumu artık hatırlanmaz.',
       type: TvToastType.success,
     );
   }
@@ -292,6 +344,98 @@ class _SettingsPageState extends State<SettingsPage> {
                                 );
                               },
                             ),
+                            if (FormFactor.isDesktopOf(context)) ...[
+                              _SettingsListCard(
+                                glowColor: AppColors.neonCyan,
+                                onActivate: _toggleAlwaysOnTop,
+                                child: ListTile(
+                                  leading: const Icon(
+                                    Icons.push_pin_outlined,
+                                    color: AppColors.neonCyan,
+                                  ),
+                                  title: const Text(
+                                    'Her Zaman Üstte',
+                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                                  subtitle: Text(
+                                    _desktop.alwaysOnTop
+                                        ? 'Açık • Pencere diğer uygulamaların üstünde kalır'
+                                        : 'Kapalı • Normal pencere sırası',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  trailing: Icon(
+                                    _desktop.alwaysOnTop
+                                        ? Icons.toggle_on_rounded
+                                        : Icons.toggle_off_outlined,
+                                    color: _desktop.alwaysOnTop
+                                        ? AppColors.neonCyan
+                                        : AppColors.textSecondary,
+                                    size: AppLayout.phone(context) ? 28 : 36,
+                                  ),
+                                ),
+                              ),
+                              _SettingsListCard(
+                                glowColor: AppColors.neonCyan,
+                                onActivate: _toggleStartWithWindows,
+                                child: ListTile(
+                                  leading: const Icon(
+                                    Icons.power_settings_new_rounded,
+                                    color: AppColors.neonCyan,
+                                  ),
+                                  title: const Text(
+                                    'Windows ile Başlat',
+                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                                  subtitle: Text(
+                                    _desktop.startWithWindows
+                                        ? 'Açık • Oturum açınca Falcon IPTV başlar'
+                                        : 'Kapalı • Elle başlatılır',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  trailing: Icon(
+                                    _desktop.startWithWindows
+                                        ? Icons.toggle_on_rounded
+                                        : Icons.toggle_off_outlined,
+                                    color: _desktop.startWithWindows
+                                        ? AppColors.neonCyan
+                                        : AppColors.textSecondary,
+                                    size: AppLayout.phone(context) ? 28 : 36,
+                                  ),
+                                ),
+                              ),
+                              _SettingsListCard(
+                                glowColor: AppColors.neonCyan,
+                                onActivate: _toggleRememberWindow,
+                                child: ListTile(
+                                  leading: const Icon(
+                                    Icons.aspect_ratio_rounded,
+                                    color: AppColors.neonCyan,
+                                  ),
+                                  title: const Text(
+                                    'Pencere Konumunu Hatırla',
+                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                                  subtitle: Text(
+                                    _desktop.rememberWindow
+                                        ? 'Açık • Boyut ve konum sonraki açılışta yüklenir'
+                                        : 'Kapalı • Varsayılan boyut kullanılır',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  trailing: Icon(
+                                    _desktop.rememberWindow
+                                        ? Icons.toggle_on_rounded
+                                        : Icons.toggle_off_outlined,
+                                    color: _desktop.rememberWindow
+                                        ? AppColors.neonCyan
+                                        : AppColors.textSecondary,
+                                    size: AppLayout.phone(context) ? 28 : 36,
+                                  ),
+                                ),
+                              ),
+                            ],
                             _SettingsListCard(
                               glowColor: AppColors.neonPurple,
                               onActivate: _toggleProtection,

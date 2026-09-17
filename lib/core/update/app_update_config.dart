@@ -17,8 +17,8 @@ abstract final class AppUpdateConfig {
   static const List<String> androidExtensions = <String>['.apk'];
 
   /// pubspec.yaml `version` ile aynı tutulmalıdır. TV APK sürümü değildir.
-  static const String currentName = '1.0.0';
-  static const int currentCode = 1;
+  static const String currentName = '1.0.1';
+  static const int currentCode = 2;
 
   static const Duration checkInterval = Duration.zero;
 
